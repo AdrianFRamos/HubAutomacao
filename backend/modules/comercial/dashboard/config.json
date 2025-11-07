@@ -1,0 +1,15 @@
+{
+  "titulo_janela": "DELPHOS.BI Principal",
+  "caminho_executavel": "C:\\Users\\bahni\\OneDrive\\Documentos\\Nova pasta\\Delphos\\Delphos\\Delphos.Exe",
+  "images_path": "images",
+  "images_annotated_path": "images_annotated",
+  "destino_screenshots": "modules/comercial/dashboard/screenshots",
+  "pasta_logs": "modules/comercial/dashboard/logs",
+  "timeout_open": 12,
+  "timeout_element": 18,
+  "region_relatorio": [0, 55, 1780, 780],
+  "numeros_whatsapp": ["+5542998726282"],
+  "mensagem_padrao": "Relatório automático - Comercial",
+  "default_user": "7755",
+  "default_password": "1210401"
+}

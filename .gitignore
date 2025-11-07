@@ -1,0 +1,18 @@
+# Node / Electron
+node_modules/
+dist/
+build/
+electron/dist/
+*.asar
+
+# Frontend
+.vite/
+.cache/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Logs
+*.log

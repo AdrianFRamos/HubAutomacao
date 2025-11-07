@@ -1,0 +1,7 @@
+-Acesso por tarefa, vai ter automações que serão listadas diariamente ,não necessitando de acesso 
+e tarefas que vão ser por acesso 
+Ex: dasboard é diario não necessita acesso, porem tirar as notas da copel precisa acessar para gerar 
+
+-Adicionar dentro do app abrir um local para criar a automação dentro do app ,uma api com o visual ou chamar o proprio python
+ 
+-bloquerar uma execução a cada vez para evitar problemas

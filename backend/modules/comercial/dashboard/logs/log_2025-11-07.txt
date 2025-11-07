@@ -1,0 +1,47 @@
+[2025-11-07 16:03:43.573293] === INICIANDO ROTINA (keyboard-first) ===
+[2025-11-07 16:03:45.244776] Executável iniciado: C:\Users\bahni\OneDrive\Documentos\Nova pasta\Delphos\Delphos\Delphos.Exe
+[2025-11-07 16:04:12.083501] Fallback Alt+Tab enviado
+[2025-11-07 16:04:20.856466] Credenciais digitadas via teclado (username/tab/password/enter)
+[2025-11-07 16:04:23.959532] Continuando fluxo mesmo sem confirmação visual do dashboard (verifique).
+[2025-11-07 16:04:29.078469] Pressionado F11 (Parametros do Sistema) - aguardando carregamento
+[2025-11-07 16:04:34.420953] Navegado por 17 setas ↓ e pressionado Enter para selecionar a planilha
+[2025-11-07 16:04:40.022845] btn_executar_rel.png não encontrado - pressionado Enter como fallback
+[2025-11-07 16:04:50.026230] Periodicidade ajustada para 'Mensal' 
+[2025-11-07 16:05:00.341570] Mês selecionado
+[2025-11-07 16:05:03.153724] Pressionado Enter para atualizar relatório (finalizar)
+[2025-11-07 16:05:07.273340] Screenshot (região) salvo em C:\Users\bahni\Project\backend\modules\comercial\dashboard\modules/comercial/dashboard/screenshots\Relatorio_Comercial_2025-11-07_16-05-07.png
+[2025-11-07 16:05:07.274618] Módulo whatsapp_clipboard não encontrado: No module named 'whatsapp'
+[2025-11-07 16:05:07.275005] Envio WhatsApp ignorado: whatsapp_clipboard não disponível.
+[2025-11-07 16:05:07.275429] === ROTINA (keyboard-first) FINALIZADA ===
+[2025-11-07 16:10:12.417826] === INICIANDO ROTINA (keyboard-first) ===
+[2025-11-07 16:10:12.669206] Executável iniciado: C:\Users\bahni\OneDrive\Documentos\Nova pasta\Delphos\Delphos\Delphos.Exe
+[2025-11-07 16:10:39.434113] Fallback Alt+Tab enviado
+[2025-11-07 16:10:48.222003] Credenciais digitadas via teclado (username/tab/password/enter)
+[2025-11-07 16:10:51.450392] Continuando fluxo mesmo sem confirmação visual do dashboard (verifique).
+[2025-11-07 16:10:56.592266] Pressionado F11 (Parametros do Sistema) - aguardando carregamento
+[2025-11-07 16:11:02.029640] Navegado por 17 setas ↓ e pressionado Enter para selecionar a planilha
+[2025-11-07 16:11:07.602023] btn_executar_rel.png não encontrado - pressionado Enter como fallback
+[2025-11-07 16:11:17.610499] Periodicidade ajustada para 'Mensal' 
+[2025-11-07 16:11:27.923393] Mês selecionado
+[2025-11-07 16:11:30.736396] Pressionado Enter para atualizar relatório (finalizar)
+[2025-11-07 16:11:34.924295] Screenshot (região) salvo em C:\Users\bahni\Project\backend\modules\comercial\dashboard\modules/comercial/dashboard/screenshots\Relatorio_Comercial_2025-11-07_16-11-34.png
+[2025-11-07 16:11:34.927073] Módulo whatsapp_clipboard não encontrado: No module named 'whatsapp'
+[2025-11-07 16:11:34.928299] Envio WhatsApp ignorado: whatsapp_clipboard não disponível.
+[2025-11-07 16:11:34.929780] === ROTINA (keyboard-first) FINALIZADA ===
+[2025-11-07 16:15:17.772537] === INICIANDO ROTINA (keyboard-first) ===
+[2025-11-07 16:15:17.843057] Executável iniciado: C:\Users\bahni\OneDrive\Documentos\Nova pasta\Delphos\Delphos\Delphos.Exe
+[2025-11-07 16:15:44.685400] Fallback Alt+Tab enviado
+[2025-11-07 16:15:53.463235] Credenciais digitadas via teclado (username/tab/password/enter)
+[2025-11-07 16:15:56.581072] Continuando fluxo mesmo sem confirmação visual do dashboard (verifique).
+[2025-11-07 16:16:01.699977] Pressionado F11 (Parametros do Sistema) - aguardando carregamento
+[2025-11-07 16:16:07.044317] Navegado por 17 setas ↓ e pressionado Enter para selecionar a planilha
+[2025-11-07 16:16:12.763818] btn_executar_rel.png não encontrado - pressionado Enter como fallback
+[2025-11-07 16:16:22.765881] Periodicidade ajustada para 'Mensal' 
+[2025-11-07 16:16:33.077908] Mês selecionado
+[2025-11-07 16:16:35.888830] Pressionado Enter para atualizar relatório (finalizar)
+[2025-11-07 16:16:39.987091] Screenshot (região) salvo em C:\Users\bahni\Project\backend\modules\comercial\dashboard\modules/comercial/dashboard/screenshots\Relatorio_Comercial_2025-11-07_16-16-39.png
+[2025-11-07 16:16:40.238903] [whcb] Abrindo https://web.whatsapp.com/send?phone=+5542998726282&text=
+[2025-11-07 16:16:49.248148] [whcb] Esperou 8.0s para carregar a página
+[2025-11-07 16:16:52.954249] [whcb] Enter pressionado - tentativa de envio concluída.
+[2025-11-07 16:16:52.955127] Envio WhatsApp (clipboard) para +5542998726282 -> True
+[2025-11-07 16:16:54.156729] === ROTINA (keyboard-first) FINALIZADA ===
