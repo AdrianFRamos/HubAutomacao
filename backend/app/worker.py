@@ -1,7 +1,7 @@
 import logging
 from uuid import UUID
 from sqlalchemy.orm import Session
-from app.db.session import SessionLocal
+from app.db import database
 from app.db import models, crud
 
 log = logging.getLogger("worker")
@@ -29,7 +29,7 @@ def process_run(job_payload: dict):
     except Exception:
         log.exception("process_run: erro ao parsear IDs do payload: %s", job_payload)
         return
-    db: Session = SessionLocal()
+    db: Session = database.SessionLocal()
     try:
         run = crud.get_run(db, run_id)
         if not run:

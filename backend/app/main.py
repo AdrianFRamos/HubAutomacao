@@ -1,23 +1,55 @@
-from app.api.routes import sectors
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from app.api.routes.automations import router as automations_router
-from app.api.routes.runs import router as runs_router
-from app.api.routes.auth import router as auth_router
-from app.api.routes.runs_sync import router as runs_sync_router
-from app.api.routes.secrets import router as secrets_router
-from app.api.routes.schedules import router as schedules_router
 import asyncio
 import logging
-from app.db.session import SessionLocal
-from app.db import crud
-from app.services.queue import queue
+import json
+from datetime import datetime
+from enum import Enum
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+# from app.scheduler import register_jobs, shutdown_scheduler, start_scheduler # Removido, pois a lógica de agendamento será desacoplada
+# from app.db.database import SessionLocal # Removido, pois a lógica de agendamento será desacoplada
+# from app.db import crud # Removido, pois a lógica de agendamento será desacoplada
+# from app.services.queue import queue # Removido, pois a lógica de agendamento será desacoplada
 from app.core.config import settings
 
+# --- Configuração de Logging Estruturado ---
 log = logging.getLogger("automacao")
-logging.basicConfig(level=logging.INFO)
 
-app = FastAPI(title="Automacao_API", version="1.0.0")
+class JsonFormatter(logging.Formatter):
+    def format(self, record):
+        log_record = {
+            "timestamp": datetime.fromtimestamp(record.created).isoformat(),
+            "level": record.levelname,
+            "name": record.name,
+            "message": record.getMessage(),
+            "module": record.module,
+            "funcName": record.funcName,
+            "lineno": record.lineno,
+            "process": record.process,
+            "thread": record.thread,
+        }
+        # Adiciona campos extras (como correlation_id, se existirem)
+        for key, value in record.__dict__.items():
+            if key not in log_record and not key.startswith('_') and key not in ('args', 'asctime', 'created', 'exc_info', 'exc_text', 'filename', 'funcName', 'levelname', 'levelno', 'lineno', 'module', 'msecs', 'message', 'msg', 'name', 'pathname', 'process', 'processName', 'relativeCreated', 'thread', 'threadName'):
+                log_record[key] = value
+                
+        return json.dumps(log_record, default=str)
+
+# Configuração básica do logging
+logging.basicConfig(
+    level=logging.INFO, # Usando INFO como padrão, mas o ideal seria ler de settings
+    handlers=[logging.StreamHandler()],
+)
+
+# Configura o logger principal para usar o formatador JSON
+for handler in logging.getLogger().handlers:
+    handler.setFormatter(JsonFormatter())
+
+log.info("Iniciando aplicação", extra={"port": settings.APP_PORT, "env": "development"})
+# -------------------------------------------
+
+app = FastAPI(title="Automacao_API", version="1.0.0", redirect_slashes=False)
 
 _allowed = [
     "http://localhost:5173",
@@ -31,7 +63,17 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
+
+# Importação das Rotas
+from app.api.routes.automations import router as automations_router
+from app.api.routes.runs import router as runs_router
+from app.api.routes.auth import router as auth_router
+from app.api.routes.secrets import router as secrets_router
+from app.api.routes.schedules import router as schedules_router
+from app.api.routes.sectors import router as sectors_router
+from app.api.routes.dashboards import router as dashboards_router 
 
 @app.get("/health")
 def health():
@@ -39,67 +81,16 @@ def health():
 
 app.include_router(auth_router)
 app.include_router(automations_router)
-app.include_router(sectors.router)
 app.include_router(runs_router)
-app.include_router(runs_sync_router)
 app.include_router(secrets_router)
 app.include_router(schedules_router)
-
-_scheduler_task: asyncio.Task | None = None
-_SCHEDULER_INTERVAL = getattr(settings, "SCHEDULER_INTERVAL", 15)
-
-async def _poll_schedules_loop():
-    log.info("Scheduler loop iniciado (interval=%ss)", _SCHEDULER_INTERVAL)
-    while True:
-        try:
-            await asyncio.sleep(_SCHEDULER_INTERVAL)
-            db = SessionLocal()
-            try:
-                due = crud.find_due_schedules(db, limit=50)
-                if due:
-                    log.info("Schedules vencidas: %d", len(due))
-                for sc in due:
-                    try:
-                        run = crud.create_run(
-                            db,
-                            automation_id=sc.automation_id,
-                            user_id=None,
-                            status="queued",
-                            payload=None,
-                        )
-                        user_id_str = ""
-                        queue.enqueue(
-                            "app.services.worker.process_run",
-                            {"run_id": str(run.id), "user_id": user_id_str},
-                        )
-                        crud.mark_schedule_triggered(db, sc)
-                        log.info("Enfileirado run=%s para schedule=%s", run.id, sc.id)
-                    except Exception:
-                        log.exception("Erro ao enfileirar schedule=%s", getattr(sc, "id", "<unknown>"))
-            except Exception:
-                log.exception("Erro ao buscar schedules vencidas")
-            finally:
-                db.close()
-        except asyncio.CancelledError:
-            log.info("Scheduler cancelado")
-            raise
-        except Exception:
-            log.exception("Erro inesperado no loop do scheduler")
+app.include_router(sectors_router)
+app.include_router(dashboards_router)
 
 @app.on_event("startup")
 async def on_startup():
-    global _scheduler_task
-    if _scheduler_task is None:
-        _scheduler_task = asyncio.create_task(_poll_schedules_loop())
-        log.info("Scheduler task criada")
+    log.info("API iniciada com sucesso.")
 
 @app.on_event("shutdown")
 async def on_shutdown():
-    global _scheduler_task
-    if _scheduler_task:
-        _scheduler_task.cancel()
-        try:
-            await _scheduler_task
-        except asyncio.CancelledError:
-            log.info("Scheduler task finalizada")
-        _scheduler_task = None
+    log.info("API encerrada.")

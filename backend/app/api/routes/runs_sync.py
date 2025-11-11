@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
-from app.db.session import get_db
+from app.db.database import get_db
 from app.db import crud, models
 from app.core.executor import run_sync
 

@@ -7,6 +7,12 @@ from dataclasses import dataclass
 from subprocess import Popen, PIPE, STDOUT, TimeoutExpired
 from typing import Any, Dict, Optional
 
+import importlib
+import traceback
+from datetime import datetime
+from app.db.database import SessionLocal
+from app.db.models import Run, Automation
+
 @dataclass
 class ExecResult:
     ok: bool
@@ -31,16 +37,17 @@ def _import_and_call(module_path: str, func_name: str, payload: dict | None):
     mod = importlib.import_module(module_path)
     func = getattr(mod, func_name)
     payload = payload or {}
-    sig = inspect.signature(func)
-    params = sig.parameters
-    if len(params) == 0:
-        return func()
-    if len(params) == 1:
-        return func(payload)
+    
     try:
-        return func(**payload)
-    except TypeError:
+        # Tenta chamar a função com o payload como argumento.
         return func(payload)
+    except TypeError as e:
+        # Se a função não aceitar argumentos, tenta chamar sem argumentos.
+        if "positional arguments but" in str(e) or "takes 0 positional arguments" in str(e):
+            return func()
+        else:
+            # Se for outro TypeError, propaga a exceção.
+            raise
 
 def _run_external(command: str, timeout: int, cwd: Optional[str] = None) -> ExecResult:
     try:
@@ -98,4 +105,21 @@ def run_sync(
             result=None,
             error="Informe command OU (module_path + func_name).",
         )
-    return _import_and_call(module_path, func_name, payload)
+    try:
+        ret = _import_and_call(module_path, func_name, payload or {})
+        if ret is None:
+            return ExecResult(ok=True, exit_code=0, stdout="", stderr="", result=None, error=None)
+        if isinstance(ret, dict):
+            ok = bool(ret.get("ok", True))
+            return ExecResult(ok=ok, exit_code=0, stdout="", stderr="", result=ret, error=None if ok else ret.get("error"))
+        return ExecResult(ok=True, exit_code=0, stdout="", stderr="", result={"data": ret}, error=None)
+    except Exception as e:
+        return ExecResult(
+            ok=False,
+            exit_code=None,
+            stdout="",
+            stderr=traceback.format_exc(),
+            result=None,
+            error=str(e),
+        )
+

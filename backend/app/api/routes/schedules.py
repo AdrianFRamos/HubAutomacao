@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from uuid import UUID
 from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
-from app.db.session import get_db
+from app.db.database import get_db
 from app.db import crud, models
 
 router = APIRouter(prefix="/schedules", tags=["schedules"])

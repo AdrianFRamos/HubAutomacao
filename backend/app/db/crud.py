@@ -72,7 +72,17 @@ def list_user_sectors(db: Session, user_id: Union[str, UUID]) -> Sequence[models
     return q.all()
 
 # ---------- Automações ----------
-def create_automation(db: Session, name: str, description: Optional[str], module_path: str, func_name: str, owner_type: str, owner_id: Union[str, UUID]) -> models.Automation:
+def create_automation(
+    db: Session,
+    name: str,
+    description: Optional[str],
+    module_path: str,
+    func_name: str,
+    owner_type: str,
+    owner_id: Union[str, UUID],
+    default_payload: Optional[Dict[str, Any]] = None,
+    config_schema: Optional[Dict[str, Any]] = None,
+) -> models.Automation:
     owner_id_uuid = _to_uuid(owner_id)
     a = models.Automation(
         name=name,
@@ -81,6 +91,8 @@ def create_automation(db: Session, name: str, description: Optional[str], module
         func_name=func_name,
         owner_type=owner_type,
         owner_id=owner_id_uuid,
+        default_payload=default_payload or {},
+        config_schema=config_schema or {},
     )
     db.add(a)
     db.commit()
@@ -260,6 +272,27 @@ def get_user_roles_by_sector(db: Session, user_id: Union[str, UUID]) -> dict:
         .all()
     )
     return {str(sid): (role or "") for sid, role in rows}
+
+def get_due_schedules(db: Session) -> Sequence[models.Schedule]:
+    """Retorna agendamentos que estão prontos para serem executados."""
+    now = datetime.now(timezone.utc)
+    # Filtra por enabled=True e next_run_at <= now
+    q = db.query(models.Schedule).filter(
+        models.Schedule.enabled == True,
+        models.Schedule.next_run_at <= now
+    )
+    return q.all()
+
+def update_schedule_next_run(db: Session, schedule_id: Union[str, UUID]):
+    """Atualiza o next_run_at do agendamento."""
+    # Esta função deve conter a lógica para calcular a próxima execução (cron ou intervalo)
+    # Como não temos a lógica de cálculo de cron, vamos apenas setar um valor para evitar loop infinito
+    # Em um ambiente real, você usaria uma biblioteca como `python-crontab` ou `apscheduler`
+    db.execute(
+        text("UPDATE schedules SET next_run_at = :next_run_at WHERE id = :id"),
+        {"next_run_at": datetime.now(timezone.utc) + timedelta(minutes=5), "id": str(schedule_id)}
+    )
+    db.commit()
 
 def user_is_operator_of_automation(db: Session, user_id: Union[str, UUID], automation_id: Union[str, UUID]) -> bool:
     uid = _to_uuid(user_id)
@@ -503,3 +536,99 @@ def finish_run(
     db.commit()
     db.refresh(run)
     return run
+
+# ---------- Dashboard Configs ----------
+def get_dashboard_config(db: Session, dashboard_id: Union[str, UUID]) -> Optional[models.DashboardConfig]:
+    """Obtém configuração de dashboard por ID"""
+    did = _to_uuid(dashboard_id)
+    if did is None:
+        return None
+    return db.query(models.DashboardConfig).filter(models.DashboardConfig.id == did).first()
+
+def get_dashboard_config_by_name(db: Session, name: str) -> Optional[models.DashboardConfig]:
+    """Obtém configuração de dashboard por nome"""
+    if not name:
+        return None
+    return db.query(models.DashboardConfig).filter(models.DashboardConfig.name == name).first()
+
+def list_dashboard_configs(
+    db: Session,
+    is_active: Optional[bool] = None,
+    skip: int = 0,
+    limit: int = 100
+) -> List[models.DashboardConfig]:
+    """Lista configurações de dashboards"""
+    q = db.query(models.DashboardConfig)
+    
+    if is_active is not None:
+        q = q.filter(models.DashboardConfig.is_active == is_active)
+    
+    q = q.order_by(models.DashboardConfig.display_name)
+    q = q.offset(skip).limit(limit)
+    
+    return q.all()
+
+def create_dashboard_config(
+    db: Session,
+    name: str,
+    display_name: str,
+    menu_path: List[str],
+    screenshot_region: List[int],
+    description: Optional[str] = None,
+    search_text: Optional[str] = None,
+    search_image: Optional[str] = None,
+    click_coords: Optional[Dict] = None,
+    menu_coords: Optional[Dict] = None,
+    has_period_selector: bool = False,
+    available_periodicities: Optional[List[str]] = None,
+    is_active: bool = True
+) -> models.DashboardConfig:
+    """Cria nova configuração de dashboard"""
+    dashboard = models.DashboardConfig(
+        id=uuid.uuid4(),
+        name=name,
+        display_name=display_name,
+        description=description,
+        menu_path=menu_path,
+        search_text=search_text,
+        search_image=search_image,
+        click_coords=click_coords,
+        menu_coords=menu_coords,
+        screenshot_region=screenshot_region,
+        has_period_selector=has_period_selector,
+        available_periodicities=available_periodicities or [],
+        is_active=is_active
+    )
+    db.add(dashboard)
+    db.commit()
+    db.refresh(dashboard)
+    return dashboard
+
+def update_dashboard_config(
+    db: Session,
+    dashboard_id: Union[str, UUID],
+    **kwargs
+) -> Optional[models.DashboardConfig]:
+    """Atualiza configuração de dashboard"""
+    dashboard = get_dashboard_config(db, dashboard_id)
+    if not dashboard:
+        return None
+    
+    for key, value in kwargs.items():
+        if hasattr(dashboard, key) and value is not None:
+            setattr(dashboard, key, value)
+    
+    dashboard.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(dashboard)
+    return dashboard
+
+def delete_dashboard_config(db: Session, dashboard_id: Union[str, UUID]) -> bool:
+    """Remove configuração de dashboard"""
+    dashboard = get_dashboard_config(db, dashboard_id)
+    if not dashboard:
+        return False
+    
+    db.delete(dashboard)
+    db.commit()
+    return True

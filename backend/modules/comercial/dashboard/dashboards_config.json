@@ -1,0 +1,195 @@
+{
+  "dashboards": {
+    "comercial_2024_2025": {
+      "display_name": "Comercial - 2024 x 2025",
+      "description": "Dashboard comparativo comercial 2024 vs 2025",
+      "menu_path": [
+        "Dashboards",
+        "Geradores De Dashboards",
+        "Planilhas"
+      ],
+      "search_text": "Comercial - 2024 x 2025",
+      "search_image": "comercial_2024_2025.png",
+      "click_coords": {
+        "x": 450,
+        "y": 24,
+        "comment": "Coordenadas do item 'Comercial - 2024 x 2025' na lista"
+      },
+      "menu_coords_0": {
+        "x": 33,
+        "y": 117,
+        "comment": "Coordenadas do menu 'Dashboards'"
+      },
+      "menu_coords_1": {
+        "x": 63,
+        "y": 287,
+        "comment": "Coordenadas do submenu 'Geradores De Dashboards'"
+      },
+      "menu_coords_2": {
+        "x": 30,
+        "y": 322,
+        "comment": "Coordenadas do submenu 'Planilhas'"
+      },
+      "screenshot_region": [0, 40, 1920, 1000],
+      "has_period_selector": true,
+      "available_periodicities": ["mensal", "anual"],
+      "is_active": true
+    },
+    
+    "comercial_comparativo": {
+      "display_name": "01 - Controladoria - Comercial - Comparativo",
+      "description": "Dashboard comercial comparativo Bahniuk",
+      "menu_path": [
+        "Dashboards",
+        "Geradores De Dashboards",
+        "Planilhas"
+      ],
+      "search_text": "01 - Controladoria - Comercial - Comparativo - Bahniuk",
+      "search_image": "comercial_comparativo.png",
+      "screenshot_region": [0, 40, 1920, 1000],
+      "has_period_selector": true,
+      "available_periodicities": ["diario", "mensal", "anual"],
+      "is_active": true
+    },
+    
+    "comercial_estoque": {
+      "display_name": "01 - Controladoria - Comercial - Estoque",
+      "description": "Dashboard comercial de estoque",
+      "menu_path": [
+        "Dashboards",
+        "Geradores De Dashboards",
+        "Planilhas"
+      ],
+      "search_text": "01 - Controladoria - Comercial - Estoque - Bahniuk",
+      "search_image": "comercial_estoque.png",
+      "screenshot_region": [0, 40, 1920, 1000],
+      "has_period_selector": true,
+      "available_periodicities": ["diario", "mensal"],
+      "is_active": true
+    },
+    
+    "financeiro": {
+      "display_name": "Financeiro - Contas a Receber",
+      "description": "Dashboard financeiro",
+      "menu_path": [
+        "Dashboards",
+        "Geradores De Dashboards",
+        "Planilhas"
+      ],
+      "search_text": "Financeiro - Contas a Receber",
+      "search_image": "financeiro.png",
+      "screenshot_region": [0, 40, 1920, 1000],
+      "has_period_selector": true,
+      "available_periodicities": ["mensal", "anual"],
+      "is_active": true
+    },
+    
+    "template": {
+      "display_name": "Nome do Dashboard",
+      "description": "Descrição do dashboard",
+      "menu_path": [
+        "Dashboards",
+        "Geradores De Dashboards",
+        "Categoria"
+      ],
+      "search_text": "Texto para buscar na lista",
+      "search_image": "nome_arquivo.png",
+      "click_coords": {
+        "x": 450,
+        "y": 100,
+        "comment": "Coordenadas exatas do item (opcional)"
+      },
+      "menu_coords_0": {
+        "x": 33,
+        "y": 117,
+        "comment": "Coordenadas do primeiro item do menu"
+      },
+      "menu_coords_1": {
+        "x": 63,
+        "y": 287,
+        "comment": "Coordenadas do segundo item do menu"
+      },
+      "screenshot_region": [0, 40, 1920, 1000],
+      "has_period_selector": false,
+      "available_periodicities": [],
+      "is_active": false
+    }
+  },
+  
+  "menu_items": {
+    "dashboards": {
+      "x": 33,
+      "y": 117,
+      "image": "menu_dashboards.png"
+    },
+    "geradores_de_dashboards": {
+      "x": 63,
+      "y": 287,
+      "image": "menu_geradores_de_dashboards.png"
+    },
+    "planilhas": {
+      "x": 30,
+      "y": 322,
+      "image": "menu_planilhas.png"
+    }
+  },
+  
+  "screenshot_regions": {
+    "default": [0, 40, 1920, 1000],
+    "full_hd": [0, 40, 1920, 1040],
+    "hd": [0, 40, 1366, 728],
+    "custom_comercial": [0, 40, 1920, 900],
+    "custom_financeiro": [0, 60, 1800, 950]
+  },
+  
+  "periodicidades": {
+    "diario": {
+      "display_name": "Diário",
+      "requires_fields": ["dia", "mes", "ano"]
+    },
+    "mensal": {
+      "display_name": "Mensal",
+      "requires_fields": ["mes", "ano"]
+    },
+    "anual": {
+      "display_name": "Anual",
+      "requires_fields": ["ano"]
+    }
+  },
+  
+  "instructions": {
+    "como_adicionar_dashboard": [
+      "1. Copie o template acima",
+      "2. Renomeie a chave (ex: 'meu_dashboard')",
+      "3. Preencha display_name e description",
+      "4. Defina menu_path (caminho no menu)",
+      "5. Defina search_text (texto para buscar)",
+      "6. (Opcional) Salve imagem de referência em images/dashboards/",
+      "7. (Opcional) Defina click_coords (coordenadas exatas)",
+      "8. Configure screenshot_region",
+      "9. Defina has_period_selector e available_periodicities",
+      "10. Defina is_active = true"
+    ],
+    "como_capturar_coordenadas": [
+      "1. Abra o sistema DELPHOS.BI",
+      "2. Execute: python -c 'import pyautogui; print(pyautogui.position())'",
+      "3. Mova o mouse sobre o item desejado",
+      "4. Anote as coordenadas (x, y)",
+      "5. Adicione em click_coords ou menu_coords_N"
+    ],
+    "como_capturar_imagem_referencia": [
+      "1. Abra o sistema e navegue até o dashboard",
+      "2. Tire screenshot da tela",
+      "3. Recorte apenas o texto/ícone do dashboard",
+      "4. Salve em images/dashboards/nome_dashboard.png",
+      "5. Adicione o nome do arquivo em search_image"
+    ],
+    "como_definir_screenshot_region": [
+      "1. Abra o dashboard que deseja capturar",
+      "2. Use ferramenta de screenshot com coordenadas",
+      "3. Anote: [x_inicio, y_inicio, largura, altura]",
+      "4. Exemplo: [0, 40, 1920, 1000] = do topo até 1000px de altura",
+      "5. Adicione em screenshot_region"
+    ]
+  }
+}

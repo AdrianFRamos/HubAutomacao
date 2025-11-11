@@ -2,16 +2,21 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 from typing import Optional
+import enum
 from sqlalchemy import (String,ForeignKey,DateTime,Text,Boolean,Integer,func,UniqueConstraint,)
 from sqlalchemy.dialects.postgresql import UUID as PGUUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from app.db.session import Base
+from app.db.database import Base
 
 def uuid4() -> uuid.UUID:
     return uuid.uuid4()
 
 # --------- Usuários e Setores ---------
+class RoleEnum(str, enum.Enum):
+    admin = "admin"
+    manager = "manager"
+    operator = "operator"
+
 class User(Base):
     __tablename__ = "users"
     id: Mapped[uuid.UUID] = mapped_column(
@@ -21,7 +26,6 @@ class User(Base):
     email: Mapped[str] = mapped_column(String, nullable=False, index=True, unique=True)
     password: Mapped[str] = mapped_column(String, nullable=False)
     role: Mapped[str] = mapped_column(String, nullable=False, default="operator")
-    is_admin: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -67,9 +71,18 @@ class Automation(Base):
     func_name: Mapped[str] = mapped_column(String, nullable=False)
     owner_type: Mapped[str] = mapped_column(String, nullable=False, default="user")
     owner_id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    default_payload: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict) # Payload padrão para a automação
+    config_schema: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict) # Schema para o formulário de configuração no frontend
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
+    )
+    # Relacionamento para obter o nome do setor quando owner_type é 'sector'
+    sector: Mapped[Optional["Sector"]] = relationship(
+        "Sector",
+        primaryjoin="and_(Automation.owner_id == Sector.id, Automation.owner_type == 'sector')",
+        foreign_keys="[Automation.owner_id]",
+        viewonly=True,
     )
 
     runs: Mapped[list["Run"]] = relationship(
@@ -154,12 +167,89 @@ class Schedule(Base):
     )
     owner_type: Mapped[str] = mapped_column(String, nullable=False)
     owner_id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
-    type: Mapped[str] = mapped_column(String, nullable=False)  # 'once' | 'interval'
+    type: Mapped[str] = mapped_column(String, nullable=False)
     run_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     interval_seconds: Mapped[Optional[int]] = mapped_column(Integer)
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     last_run_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     next_run_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now()
+    )
+    days_of_week: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    hour: Mapped[Optional[int]] = mapped_column(Integer)
+    minute: Mapped[Optional[int]] = mapped_column(Integer)
+
+
+# --------- Dashboard Configs ---------
+class DashboardConfig(Base):
+    """
+    Configuração de dashboards do sistema DELPHOS.BI
+    Armazena informações de navegação, busca e captura de screenshots
+    """
+    __tablename__ = "dashboard_configs"
+    
+    id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), primary_key=True, default=uuid4
+    )
+    name: Mapped[str] = mapped_column(
+        String(100), nullable=False, unique=True, index=True
+    )
+    display_name: Mapped[str] = mapped_column(
+        String(200), nullable=False
+    )
+    description: Mapped[Optional[str]] = mapped_column(Text)
+    
+    # Navegação no menu
+    menu_path: Mapped[dict] = mapped_column(
+        JSONB, nullable=False, default=list,
+        comment="Caminho no menu hierárquico, ex: ['Dashboards', 'Geradores', 'Planilhas']"
+    )
+    
+    # Busca visual
+    search_text: Mapped[Optional[str]] = mapped_column(
+        String(500),
+        comment="Texto para buscar na lista de dashboards"
+    )
+    search_image: Mapped[Optional[str]] = mapped_column(
+        String(500),
+        comment="Nome do arquivo de imagem de referência"
+    )
+    
+    # Coordenadas (fallback)
+    click_coords: Mapped[Optional[dict]] = mapped_column(
+        JSONB,
+        comment="Coordenadas de clique {x, y}"
+    )
+    menu_coords: Mapped[Optional[dict]] = mapped_column(
+        JSONB,
+        comment="Coordenadas dos itens de menu {0: {x, y}, 1: {x, y}, ...}"
+    )
+    
+    # Screenshot
+    screenshot_region: Mapped[dict] = mapped_column(
+        JSONB, nullable=False, default=lambda: [0, 40, 1920, 1000],
+        comment="Região de captura [x, y, largura, altura]"
+    )
+    
+    # Configuração de período
+    has_period_selector: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False,
+        comment="Se o dashboard possui seletor de período"
+    )
+    available_periodicities: Mapped[dict] = mapped_column(
+        JSONB, nullable=False, default=list,
+        comment="Periodicidades disponíveis: ['diario', 'mensal', 'anual']"
+    )
+    
+    # Status
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True
+    )
+    
+    # Timestamps
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )

@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from typing import Optional, Literal
 from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
-from app.db.session import get_db
+from app.db.database import get_db
 from app.db import crud, models
 from app.core.security import encrypt_secret, decrypt_secret
 
