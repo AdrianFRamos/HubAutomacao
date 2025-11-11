@@ -6,6 +6,7 @@ const routes = [
   { path: '/register', name: 'register', component: () => import('@/pages/Register.vue') },
   { path: '/', name: 'dashboard', component: () => import('@/pages/Dashboard.vue'), meta: { requiresAuth: true } },
   { path: '/runs', name: 'runs', component: () => import('@/pages/RunsList.vue'), meta: { requiresAuth: true } },
+  { path: '/dashboards', name: 'dashboards', component: () => import('@/pages/DashboardsPage.vue'), meta: { requiresAuth: true } },
 ]
 
 const router = createRouter({

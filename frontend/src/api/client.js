@@ -63,18 +63,19 @@ const api = {
   },
 
   // ---------- RUNS ----------
-  async createRun({ automation_id, payload }) {
-    const { data } = await http.post('/runs', { automation_id, payload })
+  async createRun({ automation_id, payload, mode = 'async', timeout_sec = 900 }) {
+    const { data } = await http.post('/runs', { automation_id, payload, mode, timeout_sec })
     return data 
   },
   async listRuns({ automation_id } = {}) {
     const { data } = await http.get('/runs', { params: { automation_id } })
     return data
   },
-  async runSync({ automation_id, payload }) {
-    const { data } = await http.post('/runs/sync', { automation_id, payload })
-    return data
-  },
+  // Endpoint /runs/sync foi unificado em /runs com mode='sync'
+  // async runSync({ automation_id, payload }) {
+  //   const { data } = await http.post('/runs/sync', { automation_id, payload })
+  //   return data
+  // },
 
   // ---------- SCHEDULES ----------
   async listSchedules({ automation_id } = {}) {
@@ -114,6 +115,32 @@ const api = {
   async listSectors() {
     const { data } = await http.get('/sectors/')
     return data
+  },
+
+  // ---------- DASHBOARDS ----------
+  async listDashboards({ is_active } = {}) {
+    const { data } = await http.get('/dashboards', { params: { is_active } })
+    return data
+  },
+  async getDashboard(id) {
+    const { data } = await http.get(`/dashboards/${id}`)
+    return data
+  },
+  async getDashboardByName(name) {
+    const { data } = await http.get(`/dashboards/by-name/${name}`)
+    return data
+  },
+  async createDashboard(body) {
+    const { data } = await http.post('/dashboards', body)
+    return data
+  },
+  async updateDashboard(id, body) {
+    const { data } = await http.put(`/dashboards/${id}`, body)
+    return data
+  },
+  async deleteDashboard(id) {
+    await http.delete(`/dashboards/${id}`)
+    return true
   },
 }
 

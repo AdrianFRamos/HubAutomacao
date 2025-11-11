@@ -9,6 +9,7 @@
 
       <div class="user">
         <span v-if="me">Olá, {{ me.name }} <small>({{ me.role }})</small></span>
+        <button class="btn btn-add" @click="openAddModal" title="Adicionar nova automação">+ Adicionar Automação</button>
         <button class="btn" @click="logout">Sair</button>
       </div>
     </header>
@@ -127,6 +128,12 @@
         </section>
       </template>
     </main>
+
+    <AddAutomationModal
+      :is-open="showAddModal"
+      @close="closeAddModal"
+      @created="onAutomationCreated"
+    />
   </div>
 </template>
 
@@ -136,6 +143,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/auth'
 import api from '@/api/client'
 import AutomationCard from '@/components/AutomationCard.vue'
+import AddAutomationModal from '@/components/AddAutomationModal.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -214,18 +222,49 @@ function resolveSectorName(a) {
 
 async function fetchAutomations() {
   const res = await api.getAutomations(true)
-  if (res?.setores && typeof res.setores === 'object') {
-    groupedFromApi.value = res.setores
-  } else if (res?.groups && typeof res.groups === 'object') {
-    groupedFromApi.value = res.groups
-  } else if (Array.isArray(res)) {
-    automationsRaw.value = res
+  let allAutomations = []
+  if (Array.isArray(res)) {
+    // Se o backend retorna um array de grupos (grouped=true)
+    if (res.length > 0 && res[0].automations) {
+      groupedFromApi.value = res
+      for (const group of res) {
+        if (Array.isArray(group.automations)) {
+          allAutomations.push(...group.automations)
+        }
+      }
+    } else {
+      // Se o backend retorna um array simples de automações (grouped=false)
+      automationsRaw.value = res
+      allAutomations = res
+    }
   } else if (Array.isArray(res?.items)) {
     automationsRaw.value = res.items
+    allAutomations = res.items
   } else {
-    if (Array.isArray(res?.data)) automationsRaw.value = res.data
-    else groupedFromApi.value = res
+    // Trata outros formatos de retorno (incluindo o formato legado)
+    if (res?.setores && typeof res.setores === 'object') {
+      groupedFromApi.value = res.setores
+    } else if (res?.groups && typeof res.groups === 'object') {
+      groupedFromApi.value = res.groups
+    } else if (Array.isArray(res?.data)) {
+      automationsRaw.value = res.data
+      allAutomations = res.data
+    } else {
+      groupedFromApi.value = res
+    }
   }
+  
+  // Se groupedFromApi foi preenchido, precisamos extrair as automações para automationsRaw
+  if (groupedFromApi.value && !Array.isArray(groupedFromApi.value)) {
+    // Trata o formato de objeto { groupName: [automations] }
+    for (const groupName in groupedFromApi.value) {
+      if (Array.isArray(groupedFromApi.value[groupName])) {
+        allAutomations.push(...groupedFromApi.value[groupName])
+      }
+    }
+  }
+
+  automationsRaw.value = allAutomations
   personalAutomations.value = (automationsRaw.value || []).filter(a => a.owner_type === 'user' && a.owner_id === me.value?.id)
   assignedAutomations.value = (automationsRaw.value || []).filter(a => Array.isArray(a.assignees) && a.assignees.includes?.(me.value?.id))
 }
@@ -249,6 +288,21 @@ async function fetchAll() {
 
 function onScheduled() { }
 function onRan() { }
+
+const showAddModal = ref(false)
+
+function openAddModal() {
+  showAddModal.value = true
+}
+
+function closeAddModal() {
+  showAddModal.value = false
+}
+
+async function onAutomationCreated(newAutomation) {
+  // Recarregar a lista de automações
+  await fetchAll()
+}
 
 onMounted(fetchAll)
 </script>
@@ -292,8 +346,15 @@ onMounted(fetchAll)
   padding: 8px 12px;
   border-radius: 6px;
   cursor: pointer;
+  transition: background-color 0.3s ease;
 }
 .btn:hover { background-color: #ff934f; }
+.btn-add {
+  background-color: #42b883;
+}
+.btn-add:hover {
+  background-color: #52d896;
+}
 
 .content {
   padding: 24px;

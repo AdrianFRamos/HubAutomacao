@@ -13,6 +13,10 @@ electron/dist/
 .venv/
 __pycache__/
 *.pyc
+modules/**/screenshots/
+modules/**/logs/
 
 # Logs
 *.log
+
+.env

@@ -89,14 +89,22 @@ async function run(sync = false) {
   loading.value = true; action.value = sync ? 'sync' : 'queue'
   try {
     const payload = resolvePayload()
+    const mode = sync ? 'sync' : 'async'
+    const logPrefix = sync ? '[RUN SYNC]' : '[RUN ASYNC]'
+    console.log(`${logPrefix} POST /runs`, { automation_id: id, payload, mode })
+    
+    const run = await api.createRun({ automation_id: id, payload, mode })
+    
     if (sync) {
-      console.log('[RUN SYNC] POST /runs/sync', { automation_id: id, payload })
-      await api.runSync({ automation_id: id, payload })
-      success.value = 'OK (sync)'
+      // Retorno síncrono é um objeto com run_id e ok: true/false
+      if (run.ok) {
+        success.value = `Execução concluída (run_id=${run.run_id}).`
+      } else {
+        error.value = `Execução falhou (run_id=${run.run_id}). Detalhes: ${explainError(run)}`
+      }
     } else {
-      console.log('[RUN ASYNC] POST /runs', { automation_id: id, payload })
-      const run = await api.createRun({ automation_id: id, payload })
-      success.value = `Execução criada (run_id=${run.id}).`
+      // Retorno assíncrono é o objeto Run criado
+      success.value = `Execução enfileirada (run_id=${run.id}).`
     }
     emit('ran')
   } catch (e) {
