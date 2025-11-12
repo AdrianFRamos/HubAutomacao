@@ -145,3 +145,34 @@ const api = {
 }
 
 export default api
+
+// ========== Uploads ==========
+export async function uploadDashboardImage(formData) {
+  const response = await fetch(`${API_BASE}/uploads/dashboard-image`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${getToken()}`,
+    },
+    body: formData,
+  })
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.detail || 'Erro ao fazer upload')
+  }
+  return response.json()
+}
+
+export async function uploadMultipleDashboardImages(formData) {
+  const response = await fetch(`${API_BASE}/uploads/dashboard-images`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${getToken()}`,
+    },
+    body: formData,
+  })
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.detail || 'Erro ao fazer upload')
+  }
+  return response.json()
+}

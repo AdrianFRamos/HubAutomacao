@@ -50,6 +50,19 @@
           </select>
         </div>
 
+        <div class="input-group" v-if="form.role && form.role !== 'admin'">
+          <label for="sector">Setor *</label>
+          <select id="sector" v-model="form.sector_id" required>
+            <option disabled value="">Selecione o setor...</option>
+            <option v-for="sector in sectors" :key="sector.id" :value="sector.id">
+              {{ sector.name }}
+            </option>
+          </select>
+          <small style="color: #aaa; font-size: 0.8rem; margin-top: 4px; display: block;">
+            Obrigatório para Manager e Operator
+          </small>
+        </div>
+
         <button type="submit" class="btn-login" :disabled="loading">
           {{ loading ? 'Cadastrando...' : 'Cadastrar' }}
         </button>
@@ -63,7 +76,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api/client'
 
@@ -76,7 +89,18 @@ const form = ref({
   name: '',
   email: '',
   password: '',
-  role: ''
+  role: '',
+  sector_id: ''
+})
+
+const sectors = ref([])
+
+onMounted(async () => {
+  try {
+    sectors.value = await api.listSectors()
+  } catch (err) {
+    console.error('Erro ao carregar setores:', err)
+  }
 })
 
 async function registerUser () {
@@ -89,8 +113,8 @@ async function registerUser () {
       name: form.value.name?.trim(),
       email: form.value.email?.trim(),
       password: form.value.password,
-      role: (form.value.role || 'operator').toLowerCase(), 
-      sectorId: form.value.sectorId ?? null,
+      role: (form.value.role || 'operator').toLowerCase(),
+      sector_id: form.value.sector_id || null,
     }
 
     const res = await api.register(payload)
