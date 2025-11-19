@@ -8,6 +8,7 @@ from importlib import import_module
 from app.db.database import get_db
 from app.db import crud, models
 from app.api.deps import get_current_user
+from app.scheduler import add_automation_job, remove_automation_job
 
 router = APIRouter(prefix="/automations", tags=["automations"])
 
@@ -109,7 +110,7 @@ def list_automations(
             "owner_id": str(getattr(a, "owner_id", "")),
             "created_at": getattr(a, "created_at", None),
             "sector_id": str(getattr(a, "owner_id", "")) if a.owner_type == "sector" else None,
-            "sector": a.sector.name if a.sector else None, # Adiciona o nome do setor
+            "sector": a.sector.name if a.sector else None, 
         }
         for a in autos
     ]
@@ -125,7 +126,6 @@ def list_automations(
         out.append({"group": "mine", "title": "Minhas automações", "automations": mine})
     for (otype, oid), arr in grouped_map.items():
         if otype == "sector":
-            # Tenta obter o nome do setor do primeiro item do grupo
             sector_name = arr[0].get("sector") if arr and arr[0].get("sector") else "Setor Desconhecido"
             out.append({"group": "sector", "sector_id": oid, "title": sector_name, "automations": arr})
     return out

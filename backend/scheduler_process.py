@@ -6,7 +6,6 @@ from sqlalchemy.orm import Session
 from app.db import database, crud
 from app.services.queue import queue
 
-# --- Configuração de Logging Estruturado ---
 log = logging.getLogger("scheduler")
 
 class JsonFormatter(logging.Formatter):
@@ -29,10 +28,8 @@ logging.basicConfig(
 
 for handler in logging.getLogger().handlers:
     handler.setFormatter(JsonFormatter())
-# -------------------------------------------
 
 def _poll_schedules_loop():
-    """Loop principal que verifica o banco de dados por agendamentos pendentes."""
     log.info("Iniciando o loop de polling do scheduler...")
     while True:
         db: Session = database.SessionLocal()
@@ -58,8 +55,6 @@ def _poll_schedules_loop():
             log.error(f"Erro no loop de polling do scheduler: {e}", exc_info=True)
         finally:
             db.close()
-        
-        # Aguarda 60 segundos antes da próxima verificação
         time.sleep(60)
 
 if __name__ == "__main__":

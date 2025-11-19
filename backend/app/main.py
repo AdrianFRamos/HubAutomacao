@@ -7,13 +7,8 @@ from enum import Enum
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-# from app.scheduler import register_jobs, shutdown_scheduler, start_scheduler # Removido, pois a lógica de agendamento será desacoplada
-# from app.db.database import SessionLocal # Removido, pois a lógica de agendamento será desacoplada
-# from app.db import crud # Removido, pois a lógica de agendamento será desacoplada
-# from app.services.queue import queue # Removido, pois a lógica de agendamento será desacoplada
 from app.core.config import settings
 
-# --- Configuração de Logging Estruturado ---
 log = logging.getLogger("automacao")
 
 class JsonFormatter(logging.Formatter):
@@ -29,20 +24,17 @@ class JsonFormatter(logging.Formatter):
             "process": record.process,
             "thread": record.thread,
         }
-        # Adiciona campos extras (como correlation_id, se existirem)
         for key, value in record.__dict__.items():
             if key not in log_record and not key.startswith('_') and key not in ('args', 'asctime', 'created', 'exc_info', 'exc_text', 'filename', 'funcName', 'levelname', 'levelno', 'lineno', 'module', 'msecs', 'message', 'msg', 'name', 'pathname', 'process', 'processName', 'relativeCreated', 'thread', 'threadName'):
                 log_record[key] = value
                 
         return json.dumps(log_record, default=str)
 
-# Configuração básica do logging
 logging.basicConfig(
-    level=logging.INFO, # Usando INFO como padrão, mas o ideal seria ler de settings
+    level=logging.INFO,
     handlers=[logging.StreamHandler()],
 )
 
-# Configura o logger principal para usar o formatador JSON
 for handler in logging.getLogger().handlers:
     handler.setFormatter(JsonFormatter())
 
@@ -73,7 +65,9 @@ from app.api.routes.auth import router as auth_router
 from app.api.routes.secrets import router as secrets_router
 from app.api.routes.schedules import router as schedules_router
 from app.api.routes.sectors import router as sectors_router
-from app.api.routes.dashboards import router as dashboards_router 
+from app.api.routes.dashboards import router as dashboards_router
+from app.api.routes.uploads import router as uploads_router
+from fastapi.staticfiles import StaticFiles 
 
 @app.get("/health")
 def health():
@@ -86,6 +80,9 @@ app.include_router(secrets_router)
 app.include_router(schedules_router)
 app.include_router(sectors_router)
 app.include_router(dashboards_router)
+app.include_router(uploads_router)
+
+app.mount("/uploads", StaticFiles(directory="/home/ubuntu/projeto_final/backend/uploads"), name="uploads")
 
 @app.on_event("startup")
 async def on_startup():

@@ -48,13 +48,20 @@ class Sector(Base):
 
 class SectorMember(Base):
     __tablename__ = "sector_members"
+    __table_args__ = (
+        UniqueConstraint("sector_id", "user_id", name="uq_sector_user"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), primary_key=True, default=uuid4
+    )
     sector_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("sector.id", ondelete="CASCADE"), primary_key=True
+        PGUUID(as_uuid=True), ForeignKey("sector.id", ondelete="CASCADE"), nullable=False
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+        PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
-    role: Mapped[str] = mapped_column(String, nullable=False, default="member")
+    role: Mapped[str] = mapped_column(String, nullable=False, default="operator")
     sector: Mapped["Sector"] = relationship("Sector", back_populates="members")
     user: Mapped["User"] = relationship("User")
 
@@ -69,15 +76,17 @@ class Automation(Base):
     description: Mapped[Optional[str]] = mapped_column(Text)
     module_path: Mapped[str] = mapped_column(String, nullable=False)
     func_name: Mapped[str] = mapped_column(String, nullable=False)
+    automation_type: Mapped[str] = mapped_column(String, nullable=False, default="generic")
+    dashboard_screenshot: Mapped[Optional[str]] = mapped_column(String)
+    dashboard_name_image: Mapped[Optional[str]] = mapped_column(String)
     owner_type: Mapped[str] = mapped_column(String, nullable=False, default="user")
     owner_id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
-    default_payload: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict) # Payload padrão para a automação
-    config_schema: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict) # Schema para o formulário de configuração no frontend
+    default_payload: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict) 
+    config_schema: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict) 
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
-    # Relacionamento para obter o nome do setor quando owner_type é 'sector'
     sector: Mapped[Optional["Sector"]] = relationship(
         "Sector",
         primaryjoin="and_(Automation.owner_id == Sector.id, Automation.owner_type == 'sector')",
@@ -182,10 +191,6 @@ class Schedule(Base):
 
 # --------- Dashboard Configs ---------
 class DashboardConfig(Base):
-    """
-    Configuração de dashboards do sistema DELPHOS.BI
-    Armazena informações de navegação, busca e captura de screenshots
-    """
     __tablename__ = "dashboard_configs"
     
     id: Mapped[uuid.UUID] = mapped_column(

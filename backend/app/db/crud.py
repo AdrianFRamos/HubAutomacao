@@ -100,15 +100,10 @@ def create_automation(
     return a
 
 def get_automation_by_id(db: Session, automation_id: str | UUID):
-    try:
-        _ = UUID(str(automation_id))
-        return (
-            db.query(models.Automation)
-            .filter(models.Automation.id == str(automation_id))
-            .first()
-        )
-    except Exception:
+    oid = _to_uuid(automation_id)
+    if oid is None:
         return None
+    return db.query(models.Automation).filter(models.Automation.id == oid).first()
 
 def get_automation_by_id_or_name(db: Session, lookup: str):
     found = get_automation_by_id(db, lookup)
@@ -274,9 +269,7 @@ def get_user_roles_by_sector(db: Session, user_id: Union[str, UUID]) -> dict:
     return {str(sid): (role or "") for sid, role in rows}
 
 def get_due_schedules(db: Session) -> Sequence[models.Schedule]:
-    """Retorna agendamentos que estão prontos para serem executados."""
     now = datetime.now(timezone.utc)
-    # Filtra por enabled=True e next_run_at <= now
     q = db.query(models.Schedule).filter(
         models.Schedule.enabled == True,
         models.Schedule.next_run_at <= now
@@ -284,10 +277,6 @@ def get_due_schedules(db: Session) -> Sequence[models.Schedule]:
     return q.all()
 
 def update_schedule_next_run(db: Session, schedule_id: Union[str, UUID]):
-    """Atualiza o next_run_at do agendamento."""
-    # Esta função deve conter a lógica para calcular a próxima execução (cron ou intervalo)
-    # Como não temos a lógica de cálculo de cron, vamos apenas setar um valor para evitar loop infinito
-    # Em um ambiente real, você usaria uma biblioteca como `python-crontab` ou `apscheduler`
     db.execute(
         text("UPDATE schedules SET next_run_at = :next_run_at WHERE id = :id"),
         {"next_run_at": datetime.now(timezone.utc) + timedelta(minutes=5), "id": str(schedule_id)}
@@ -539,14 +528,12 @@ def finish_run(
 
 # ---------- Dashboard Configs ----------
 def get_dashboard_config(db: Session, dashboard_id: Union[str, UUID]) -> Optional[models.DashboardConfig]:
-    """Obtém configuração de dashboard por ID"""
     did = _to_uuid(dashboard_id)
     if did is None:
         return None
     return db.query(models.DashboardConfig).filter(models.DashboardConfig.id == did).first()
 
 def get_dashboard_config_by_name(db: Session, name: str) -> Optional[models.DashboardConfig]:
-    """Obtém configuração de dashboard por nome"""
     if not name:
         return None
     return db.query(models.DashboardConfig).filter(models.DashboardConfig.name == name).first()
@@ -557,7 +544,6 @@ def list_dashboard_configs(
     skip: int = 0,
     limit: int = 100
 ) -> List[models.DashboardConfig]:
-    """Lista configurações de dashboards"""
     q = db.query(models.DashboardConfig)
     
     if is_active is not None:
@@ -583,7 +569,6 @@ def create_dashboard_config(
     available_periodicities: Optional[List[str]] = None,
     is_active: bool = True
 ) -> models.DashboardConfig:
-    """Cria nova configuração de dashboard"""
     dashboard = models.DashboardConfig(
         id=uuid.uuid4(),
         name=name,
@@ -609,7 +594,6 @@ def update_dashboard_config(
     dashboard_id: Union[str, UUID],
     **kwargs
 ) -> Optional[models.DashboardConfig]:
-    """Atualiza configuração de dashboard"""
     dashboard = get_dashboard_config(db, dashboard_id)
     if not dashboard:
         return None
@@ -624,7 +608,6 @@ def update_dashboard_config(
     return dashboard
 
 def delete_dashboard_config(db: Session, dashboard_id: Union[str, UUID]) -> bool:
-    """Remove configuração de dashboard"""
     dashboard = get_dashboard_config(db, dashboard_id)
     if not dashboard:
         return False

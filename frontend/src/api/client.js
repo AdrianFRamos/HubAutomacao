@@ -42,8 +42,11 @@ const api = {
     const { data } = await http.get('/auth/me')
     return data 
   },
-  async register({ name, email, password, role }) {
-    const { data } = await http.post('/auth/register', { name, email, password, role })
+  async register({ name, email, password, role, sector_id }) {
+    // Só envia sector_id se não for admin
+    const payload = { name, email, password, role }
+    if (role !== 'admin' && sector_id) payload.sector_id = sector_id
+    const { data } = await http.post('/auth/register', payload)
     return data
   },
 

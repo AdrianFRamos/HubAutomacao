@@ -1,7 +1,3 @@
-"""
-Automação de Dashboards DELPHOS.BI - Versão 2.0
-Navegação por menu hierárquico com busca visual
-"""
 import os, time, json
 import pyautogui, keyring
 from datetime import datetime
@@ -19,7 +15,6 @@ CFG_PATH = os.path.join(BASE, "config.json")
 DASHBOARDS_CONFIG_PATH = os.path.join(BASE, "dashboards_config.json")
 
 def log(msg: str, logger=None):
-    """Log com suporte a logger externo"""
     if logger and callable(logger):
         logger(msg)
     else:
@@ -31,26 +26,22 @@ def log(msg: str, logger=None):
     print(msg)
 
 def load_config() -> dict:
-    """Carrega configuração geral"""
     if os.path.exists(CFG_PATH):
         with open(CFG_PATH, "r", encoding="utf-8") as f:
             return json.load(f)
     return {}
 
 def load_dashboards_config() -> dict:
-    """Carrega configuração de dashboards"""
     if os.path.exists(DASHBOARDS_CONFIG_PATH):
         with open(DASHBOARDS_CONFIG_PATH, "r", encoding="utf-8") as f:
             return json.load(f)
     return {}
 
 def get_dashboard_config(dashboard_name: str) -> Optional[dict]:
-    """Obtém configuração de um dashboard específico"""
     dashboards = load_dashboards_config()
     return dashboards.get("dashboards", {}).get(dashboard_name)
 
 def get_credentials(cfg: dict) -> tuple:
-    """Obtém credenciais do keyring ou config"""
     SERVICE = "HubAutomacoes_SistemaBI"
     username = cfg.get("default_user")
     password = None
@@ -67,7 +58,6 @@ def get_credentials(cfg: dict) -> tuple:
     return username, password
 
 def open_app(cfg: dict) -> bool:
-    """Abre o executável do sistema"""
     exe = cfg.get("caminho_executavel")
     if not exe:
         log("Executável não configurado")
@@ -93,7 +83,6 @@ def open_app(cfg: dict) -> bool:
         return False
 
 def focus_login_window(cfg: dict, img_dir: str) -> bool:
-    """Foca a janela de login"""
     titles = ["Acesso", "Acesso - DELPHOS.BI", "Login", "DELPHOS.BI Principal"]
     for t in titles:
         if focus_window_by_title(t, timeout=2):
@@ -120,7 +109,6 @@ def focus_login_window(cfg: dict, img_dir: str) -> bool:
     return False
 
 def do_login_keyboard(username: str, password: str, cfg: dict, img_dir: str) -> bool:
-    """Realiza login via teclado"""
     if not focus_login_window(cfg, img_dir):
         log("Não conseguiu focar janela de login")
         return False
@@ -136,7 +124,6 @@ def do_login_keyboard(username: str, password: str, cfg: dict, img_dir: str) -> 
     log("Credenciais digitadas via teclado")
     time.sleep(3.0)
     
-    # Verifica se login foi bem-sucedido
     dash_img = os.path.join(img_dir, "dashboard_full.png")
     if os.path.exists(dash_img):
         try:
@@ -151,7 +138,6 @@ def do_login_keyboard(username: str, password: str, cfg: dict, img_dir: str) -> 
     return True
 
 def click_menu_item_by_image(item_name: str, img_dir: str, timeout: int = 5) -> bool:
-    """Clica em item do menu usando imagem de referência"""
     img_path = os.path.join(img_dir, "menu_items", f"{item_name}.png")
     
     if not os.path.exists(img_path):
@@ -170,7 +156,6 @@ def click_menu_item_by_image(item_name: str, img_dir: str, timeout: int = 5) -> 
     return False
 
 def click_menu_item_by_coords(x: int, y: int, item_name: str) -> bool:
-    """Clica em item do menu usando coordenadas"""
     try:
         pyautogui.click(x, y)
         log(f"Clicado em menu: {item_name} ({x}, {y})")
@@ -181,11 +166,9 @@ def click_menu_item_by_coords(x: int, y: int, item_name: str) -> bool:
         return False
 
 def find_and_click_dashboard(dashboard_config: dict, img_dir: str) -> bool:
-    """Procura e clica no dashboard específico"""
     search_text = dashboard_config.get("search_text")
     search_image = dashboard_config.get("search_image")
     
-    # Método 1: Por imagem de referência
     if search_image:
         img_path = os.path.join(img_dir, "dashboards", search_image)
         if os.path.exists(img_path):
@@ -197,7 +180,6 @@ def find_and_click_dashboard(dashboard_config: dict, img_dir: str) -> bool:
             except Exception as e:
                 log(f"Erro ao buscar por imagem: {e}")
     
-    # Método 2: Por coordenadas (se configurado)
     if "click_coords" in dashboard_config:
         coords = dashboard_config["click_coords"]
         try:
@@ -207,33 +189,25 @@ def find_and_click_dashboard(dashboard_config: dict, img_dir: str) -> bool:
         except Exception as e:
             log(f"Erro ao clicar por coordenadas: {e}")
     
-    # Método 3: OCR (futuro)
-    # TODO: Implementar busca por OCR
-    
     log(f"Não foi possível encontrar dashboard: {search_text}")
     return False
 
 def navigate_to_dashboard(dashboard_name: str, cfg: dict, img_dir: str) -> bool:
-    """Navega até o dashboard especificado"""
     dashboard_config = get_dashboard_config(dashboard_name)
     
     if not dashboard_config:
         log(f"Dashboard '{dashboard_name}' não encontrado na configuração")
         return False
     
-    # Foca janela principal
     focus_window_by_title(cfg.get("titulo_janela", "DELPHOS.BI Principal"), timeout=4)
     time.sleep(1)
     
-    # Navega pelo menu hierárquico
     menu_path = dashboard_config.get("menu_path", [])
     
     log(f"Navegando pelo menu: {' → '.join(menu_path)}")
     
     for i, menu_item in enumerate(menu_path):
-        # Tenta clicar por imagem primeiro
         if not click_menu_item_by_image(menu_item, img_dir):
-            # Fallback: coordenadas fixas (se configurado)
             coords = dashboard_config.get(f"menu_coords_{i}")
             if coords:
                 click_menu_item_by_coords(coords["x"], coords["y"], menu_item)
@@ -243,7 +217,6 @@ def navigate_to_dashboard(dashboard_name: str, cfg: dict, img_dir: str) -> bool:
         
         time.sleep(0.8)
     
-    # Clica no dashboard específico
     if not find_and_click_dashboard(dashboard_config, img_dir):
         return False
     
@@ -255,24 +228,19 @@ def navigate_to_dashboard(dashboard_name: str, cfg: dict, img_dir: str) -> bool:
 def configure_period(periodicidade: str, dia: Optional[int] = None, 
                     mes: Optional[int] = None, ano: Optional[int] = None,
                     dashboard_config: dict = None) -> bool:
-    """Configura período do dashboard (se aplicável)"""
     if not dashboard_config or not dashboard_config.get("has_period_selector"):
         log("Dashboard não possui seletor de período")
         return True
     
-    # TODO: Implementar lógica de seleção de período
-    # Isso depende de como cada dashboard específico funciona
     log(f"Configuração de período: {periodicidade} - {mes}/{ano}")
     
     return True
 
 def capture_screenshot(region: Optional[List[int]], screenshot_dir: str, 
                       dashboard_name: str) -> str:
-    """Captura screenshot da região do dashboard"""
     os.makedirs(screenshot_dir, exist_ok=True)
     
     if not region or len(region) != 4:
-        # Fallback: screenshot completo
         full = save_full_screenshot(screenshot_dir, name_prefix=f"dashboard_{dashboard_name}_full")
         log(f"Screenshot completo salvo: {full}")
         return full
@@ -286,7 +254,6 @@ def capture_screenshot(region: Optional[List[int]], screenshot_dir: str,
         return path
 
 def send_whatsapp_report(screenshot_path: str, numeros: list, mensagem: str):
-    """Envia relatório via WhatsApp"""
     try:
         from modules.comercial.dashboard.whatsapp import send_whatsapp_via_clipboard
     except Exception as e:
@@ -331,11 +298,9 @@ def run(payload: Dict[str, Any] = None) -> Dict[str, Any]:
     
     if not payload:
         payload = {}
-    
-    # Carrega configurações
+
     cfg = load_config()
     
-    # Parâmetros obrigatórios
     dashboard_name = payload.get("dashboard_name")
     if not dashboard_name:
         return {
@@ -344,7 +309,6 @@ def run(payload: Dict[str, Any] = None) -> Dict[str, Any]:
             "message": "É necessário informar o nome do dashboard"
         }
     
-    # Obtém configuração do dashboard
     dashboard_config = get_dashboard_config(dashboard_name)
     if not dashboard_config:
         return {
@@ -353,13 +317,11 @@ def run(payload: Dict[str, Any] = None) -> Dict[str, Any]:
             "message": f"Dashboard '{dashboard_name}' não encontrado na configuração"
         }
     
-    # Parâmetros opcionais
     periodicidade = payload.get("periodicidade", "mensal")
     mes = payload.get("mes")
     ano = payload.get("ano")
     dia = payload.get("dia")
     
-    # Região de screenshot (usa padrão do dashboard se não informado)
     regiao = payload.get("screenshot_region")
     if not regiao:
         regiao = dashboard_config.get("screenshot_region")
@@ -368,11 +330,9 @@ def run(payload: Dict[str, Any] = None) -> Dict[str, Any]:
     numeros_wh = payload.get("numeros_whatsapp", cfg.get("numeros_whatsapp", []))
     mensagem = payload.get("mensagem", f"Relatório {dashboard_config.get('display_name', dashboard_name)}")
     
-    # Diretórios
     img_dir = os.path.join(BASE, cfg.get("images_path", "images"))
     screenshot_dir = payload.get("_workspace", cfg.get("destino_screenshots", "screenshots"))
     
-    # Obtém credenciais
     username, password = get_credentials(cfg)
     if not username or not password:
         return {
@@ -382,7 +342,6 @@ def run(payload: Dict[str, Any] = None) -> Dict[str, Any]:
         }
     
     try:
-        # 1. Abre aplicativo (se configurado)
         if cfg.get("caminho_executavel"):
             opened = open_app(cfg)
             if not opened:
@@ -390,7 +349,6 @@ def run(payload: Dict[str, Any] = None) -> Dict[str, Any]:
         
         time.sleep(cfg.get("timeout_open", 6))
         
-        # 2. Login
         ok = do_login_keyboard(username, password, cfg, img_dir)
         if not ok:
             return {
@@ -398,8 +356,7 @@ def run(payload: Dict[str, Any] = None) -> Dict[str, Any]:
                 "error": "Falha no login",
                 "message": "Não foi possível fazer login no sistema"
             }
-        
-        # 3. Navega até dashboard
+
         ok = navigate_to_dashboard(dashboard_name, cfg, img_dir)
         if not ok:
             return {
@@ -407,17 +364,9 @@ def run(payload: Dict[str, Any] = None) -> Dict[str, Any]:
                 "error": "Falha na navegação",
                 "message": f"Não foi possível navegar até o dashboard '{dashboard_name}'"
             }
-        
-        # 4. Configura período (se aplicável)
         configure_period(periodicidade, dia, mes, ano, dashboard_config)
-        
-        # 5. Aguarda carregamento completo
         time.sleep(5.0)
-        
-        # 6. Captura screenshot
         screenshot_path = capture_screenshot(regiao, screenshot_dir, dashboard_name)
-        
-        # 7. Envia WhatsApp (se solicitado)
         if enviar_wh and numeros_wh:
             send_whatsapp_report(screenshot_path, numeros_wh, mensagem)
         
@@ -441,10 +390,7 @@ def run(payload: Dict[str, Any] = None) -> Dict[str, Any]:
             "error": str(e),
             "message": "Erro durante execução da automação"
         }
-
-# Compatibilidade com versão antiga
 def main():
-    """Wrapper para compatibilidade com execução direta"""
     result = run()
     if not result.get("ok"):
         log(f"ERRO: {result.get('error')}")

@@ -11,17 +11,15 @@ from app.api.deps import get_current_user
 from app.db.database import get_db
 from app.db import crud, models
 from app.services.queue import queue
-from app.core.executor import run_sync # Necessário para a execução síncrona
+from app.core.executor import run_sync 
 
 router = APIRouter(prefix="/runs", tags=["runs"])
 
 class RunMode(str, Enum):
-    """Define o modo de execução da automação."""
     ASYNC = "async"
     SYNC = "sync"
 
 class RunRequest(BaseModel):
-    """Modelo de entrada unificado para requisições de execução."""
     automation_id: str = Field(..., description="UUID ou nome da automação a executar")
     payload: Optional[Dict[str, Any]] = Field(default_factory=dict)
     mode: RunMode = Field(RunMode.ASYNC, description="Modo de execução: 'async' (fila) ou 'sync' (imediato)")
@@ -33,12 +31,6 @@ def create_run(
     db: Session = Depends(get_db),
     current: models.User = Depends(get_current_user),
 ):
-    """
-    Cria e inicia uma execução de automação.
-    Se mode='async', a execução é enfileirada.
-    Se mode='sync', a execução é realizada imediatamente (bloqueante).
-    """
-    # 1. Validação e Busca da Automação
     auto_id_lookup = None
     try:
         auto_id_lookup = UUID(data.automation_id)
@@ -54,7 +46,6 @@ def create_run(
     if not allowed:
         raise HTTPException(status_code=403, detail="Sem permissão para executar essa automação.")
 
-    # 2. Criação do Registro de Execução (Run)
     run = crud.create_run(
         db,
         automation_id=automation.id,          
@@ -64,9 +55,7 @@ def create_run(
         started_at=None if data.mode == RunMode.ASYNC else datetime.now(timezone.utc),
     )
     
-    # 3. Execução
     if data.mode == RunMode.ASYNC:
-        # Execução Assíncrona (via fila)
         queue.enqueue(
             "app.worker.process_run",
             {"run_id": str(run.id), "user_id": str(current.id)},
@@ -74,12 +63,10 @@ def create_run(
         return run
     
     elif data.mode == RunMode.SYNC:
-        # Execução Síncrona (bloqueante)
         module_path = automation.module_path
         func_name = automation.func_name
         command = None
         
-        # Lógica para comandos shell (mantida do runs_sync.py original)
         if module_path and isinstance(module_path, str) and module_path.startswith("shell:"):
             command = module_path.replace("shell:", "", 1).strip()
             module_path = None
@@ -97,7 +84,6 @@ def create_run(
                 cwd=None,
             )
             
-            # 4. Finalização do Registro de Execução
             status_val = "success" if getattr(result, "ok", False) else "failed"
             stdout_str = result.stdout if isinstance(result.stdout, str) or result.stdout is None else str(result.stdout)
             stderr_str = result.stderr if isinstance(result.stderr, str) or result.stderr is None else str(result.stderr)
@@ -117,7 +103,6 @@ def create_run(
                 },
             )
             
-            # 5. Tratamento de Erro e Retorno
             if not getattr(result, "ok", False):
                 raise HTTPException(
                     status_code=500,
@@ -141,7 +126,6 @@ def create_run(
         except HTTPException:
             raise
         except Exception as e:
-            # Em caso de exceção, finaliza o registro como falha
             crud.finish_run(
                 db,
                 run_id=run.id,
@@ -170,5 +154,4 @@ def list_runs(
     db: Session = Depends(get_db),
     current: models.User = Depends(get_current_user),
 ):
-    """Lista as execuções de automação do usuário."""
     return crud.list_runs_for_user(db, current.id, automation_id)

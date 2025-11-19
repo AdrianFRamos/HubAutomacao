@@ -43,5 +43,6 @@
 [2025-11-07 16:16:40.238903] [whcb] Abrindo https://web.whatsapp.com/send?phone=+5542998726282&text=
 [2025-11-07 16:16:49.248148] [whcb] Esperou 8.0s para carregar a página
 [2025-11-07 16:16:52.954249] [whcb] Enter pressionado - tentativa de envio concluída.
-[2025-11-07 16:16:52.955127] Envio WhatsApp (clipboard) para +5542998726282 -> True
-[2025-11-07 16:16:54.156729] === ROTINA (keyboard-first) FINALIZADA ===
+[removed]
+This runtime log was committed accidentally and has been cleaned from the repository.
+Runtime logs should be written to a workspace directory and ignored by git (see `backend/.gitignore`).

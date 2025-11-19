@@ -66,9 +66,6 @@ def list_dashboards(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    """
-    Lista todas as configurações de dashboards
-    """
     dashboards = crud.list_dashboard_configs(db, is_active=is_active, skip=skip, limit=limit)
     
     return [
@@ -98,9 +95,6 @@ def get_dashboard(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    """
-    Obtém configuração de um dashboard específico
-    """
     dashboard = crud.get_dashboard_config(db, dashboard_id)
     
     if not dashboard:
@@ -133,17 +127,12 @@ def get_dashboard_by_name(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    """
-    Obtém configuração de um dashboard por nome
-    """
     dashboard = crud.get_dashboard_config_by_name(db, name)
-    
     if not dashboard:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Dashboard '{name}' não encontrado"
         )
-    
     return DashboardConfigResponse(
         id=str(dashboard.id),
         name=dashboard.name,
@@ -168,18 +157,11 @@ def create_dashboard(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    """
-    Cria nova configuração de dashboard
-    Requer permissão de admin
-    """
-    # Verifica se usuário é admin
     if current_user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Apenas administradores podem criar dashboards"
         )
-    
-    # Verifica se já existe dashboard com mesmo nome
     existing = crud.get_dashboard_config_by_name(db, data.name)
     if existing:
         raise HTTPException(
@@ -228,18 +210,11 @@ def update_dashboard(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    """
-    Atualiza configuração de dashboard
-    Requer permissão de admin
-    """
-    # Verifica se usuário é admin
     if current_user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Apenas administradores podem atualizar dashboards"
         )
-    
-    # Atualiza apenas campos fornecidos
     update_data = data.dict(exclude_unset=True)
     
     dashboard = crud.update_dashboard_config(db, dashboard_id, **update_data)
@@ -274,11 +249,6 @@ def delete_dashboard(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    """
-    Remove configuração de dashboard
-    Requer permissão de admin
-    """
-    # Verifica se usuário é admin
     if current_user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

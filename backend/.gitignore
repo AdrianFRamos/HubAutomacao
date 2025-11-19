@@ -1,0 +1,13 @@
+# Backend ignores
+# Ignore runtime artifacts created by automations
+modules/**/logs/
+modules/**/screenshots/
+modules/**/screenshots/*
+modules/**/logs/*
+
+# Workspace outputs
+uploads/
+*.sqlite3
+
+# Python virtualenv
+.venv/

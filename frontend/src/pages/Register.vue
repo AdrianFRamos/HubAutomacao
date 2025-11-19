@@ -109,12 +109,22 @@ async function registerUser () {
   isError.value = false
 
   try {
+
+    const role = (form.value.role || 'operator').toLowerCase()
+    // Validação: setor obrigatório para manager/operator
+    if ((role === 'manager' || role === 'operator') && !form.value.sector_id) {
+      message.value = 'Selecione um setor para Manager ou Operator.'
+      isError.value = true
+      loading.value = false
+      return
+    }
+
     const payload = {
       name: form.value.name?.trim(),
       email: form.value.email?.trim(),
       password: form.value.password,
-      role: (form.value.role || 'operator').toLowerCase(),
-      sector_id: form.value.sector_id || null,
+      role,
+      sector_id: (role !== 'admin') ? form.value.sector_id : undefined,
     }
 
     const res = await api.register(payload)

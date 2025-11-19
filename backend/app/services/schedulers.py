@@ -93,78 +93,69 @@ def _enqueue_run_safe(run_id: str | int) -> None:
 
 def dispatch_due_schedules() -> dict:
     processed = 0
-    skipped = 0
     created_runs = 0
+    skipped = 0
     now = _utcnow()
     with session_scope() as db:
-        q = (
-            select(models.Schedule)
-            .where(
-                getattr(models.Schedule, "is_active", True) == True,
+        try:
+            schedules = db.query(models.Schedule).filter(
+                getattr(models.Schedule, "enabled", True) == True,
                 getattr(models.Schedule, "next_run_at", now) <= now,
-            )
-            .order_by(getattr(models.Schedule, "next_run_at", now).asc())
-        )
-        try:
-            q = q.with_for_update(skip_locked=True)
-            supports_skip_locked = True
-        except Exception:
-            supports_skip_locked = False
-
-        try:
-            schedules = list(db.execute(q).scalars().all())
+            ).order_by(models.Schedule.next_run_at.asc()).all()
         except OperationalError as e:
-            logger.warning("Banco não suportou SKIP LOCKED (%s); refazendo sem for_update.", e)
-            q = (
-                select(models.Schedule)
-                .where(
-                    getattr(models.Schedule, "is_active", True) == True,
-                    getattr(models.Schedule, "next_run_at", now) <= now,
-                )
-                .order_by(getattr(models.Schedule, "next_run_at", now).asc())
-            )
-            schedules = list(db.execute(q).scalars().all())
+            logger.exception("Erro ao consultar schedules: %s", e)
+            schedules = []
+
         for sch in schedules:
             processed += 1
-            recent_seconds = 5
-            recent_cut = now - timedelta(seconds=recent_seconds)
-
-            run_exists_q = (
-                select(func.count(models.Run.id))
-                .where(
-                    getattr(models.Run, "schedule_id", None) == getattr(sch, "id"),
-                    getattr(models.Run, "created_at", now) >= recent_cut,
-                    getattr(models.Run, "status", "queued").in_(("queued", "running")),
-                )
-            )
-            existing = db.execute(run_exists_q).scalar_one()
-            if existing and existing > 0:
-                skipped += 1
-                continue
-            run = models.Run(
-                automation_id=getattr(sch, "automation_id"),
-                schedule_id=getattr(sch, "id"),
-                status="queued",
-                trigger="schedule",
-                payload=getattr(sch, "payload", None),
-                created_at=now,
-            )
-            db.add(run)
-            db.flush()
-            next_at = _compute_next_run(now, sch)
-            setattr(sch, "last_run_at", now)
-            setattr(sch, "next_run_at", next_at)
-            created_runs += 1
             try:
-                _enqueue_run_safe(run.id)
-            except Exception as e:
-                logger.exception("Falha ao enfileirar run %s do schedule %s: %s", run.id, sch.id, e)
+                user_id = sch.owner_id if getattr(sch, "owner_type", "") == "user" else None
+                run = None
+                try:
+                    run = __create_run_and_enqueue(db, sch, user_id)
+                except Exception as e:
+                    logger.exception("Falha ao criar/enfileirar run para schedule %s: %s", getattr(sch, "id", None), e)
+                    skipped += 1
+                    continue
+                try:
+                    next_at = _compute_next_run(now, sch)
+                    sch.last_run_at = now
+                    sch.next_run_at = next_at
+                    db.add(sch)
+                    db.commit()
+                except Exception:
+                    logger.exception("Falha ao atualizar next_run para schedule %s", getattr(sch, "id", None))
+                created_runs += 1
+            except Exception:
+                logger.exception("Erro ao processar schedule %s", getattr(sch, "id", None))
+                skipped += 1
+
     summary = {
         "processed_schedules": processed,
-        "skipped_due_to_recent_run": skipped,
+        "skipped_due_to_errors": skipped,
         "created_runs": created_runs,
         "ts": now.isoformat(),
-        "skip_locked": supports_skip_locked,
     }
     logger.info("dispatch_due_schedules summary: %s", summary)
     return summary
+
+
+def __create_run_and_enqueue(db: Session, schedule: models.Schedule, user_id=None):
+    payload = getattr(schedule, "payload", None) or {}
+    run = models.Run(
+        automation_id=getattr(schedule, "automation_id"),
+        user_id=user_id,
+        status="queued",
+        payload=payload,
+    )
+    db.add(run)
+    db.flush()
+    try:
+        if _HAS_ENQUEUE_HELPER:
+            from app.services.queue import queue as _q
+            _q.enqueue("app.worker.process_run", {"run_id": str(run.id), "user_id": str(user_id) if user_id else None})
+        elif _queue is not None:
+            _queue.enqueue("app.worker.process_run", {"run_id": str(run.id), "user_id": str(user_id) if user_id else None})
+    except Exception:
+        logger.exception("Falha ao enfileirar run %s", getattr(run, "id", None))
+    return run

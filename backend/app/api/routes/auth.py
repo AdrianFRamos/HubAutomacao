@@ -29,13 +29,28 @@ def register(data: RegisterIn, db: Session = Depends(get_db)):
         raise HTTPException(status_code=409, detail="E-mail já cadastrado")
     role = data.role or "operator"
     pwd_hash = hash_password(data.password)
-    user = crud.create_user(db, data.name, normalized_email, pwd_hash, role=role)
-    if data.sector_id:
-        m = db.query(models.Sector).filter(models.Sector.id == data.sector_id).first()
-        if not m:
+
+    # Validação: setor obrigatório para manager/operator
+    if role in ("manager", "operator"):
+        if not data.sector_id:
+            raise HTTPException(status_code=422, detail="Setor é obrigatório para Manager ou Operator")
+        sector = db.query(models.Sector).filter(models.Sector.id == data.sector_id).first()
+        if not sector:
             raise HTTPException(status_code=404, detail="Setor não encontrado")
-        db.add(models.SectorMember(sector_id=data.sector_id, user_id=user.id, role=role))
+    # Para admin, ignora sector_id
+
+    user = crud.create_user(db, data.name, normalized_email, pwd_hash, role=role)
+
+    if role in ("manager", "operator"):
+        sector_member = models.SectorMember(
+            sector_id=data.sector_id,
+            user_id=user.id,
+            role=role
+        )
+        db.add(sector_member)
         db.commit()
+        db.refresh(sector_member)
+
     return {"ok": True, "user_id": str(user.id)}
 
 class LoginIn(BaseModel):

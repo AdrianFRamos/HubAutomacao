@@ -39,14 +39,11 @@ def _import_and_call(module_path: str, func_name: str, payload: dict | None):
     payload = payload or {}
     
     try:
-        # Tenta chamar a função com o payload como argumento.
         return func(payload)
     except TypeError as e:
-        # Se a função não aceitar argumentos, tenta chamar sem argumentos.
         if "positional arguments but" in str(e) or "takes 0 positional arguments" in str(e):
             return func()
         else:
-            # Se for outro TypeError, propaga a exceção.
             raise
 
 def _run_external(command: str, timeout: int, cwd: Optional[str] = None) -> ExecResult:

@@ -27,8 +27,6 @@ def execute_run(
     crud.set_run_status_running(db, run_id)
     try:
         ws = user_workspace(user_id) if user_id else None
-        # Mescla o default_payload da automacao com o payload da requisicao
-        # O payload da requisicao tem prioridade (sobrescreve o padrao)
         default_data = _safe_payload(getattr(automation, "default_payload", None))
         request_data = _safe_payload(payload)
         data = {**default_data, **request_data}
@@ -53,21 +51,17 @@ def execute_run(
             return False
         fn = getattr(mod, automation.func_name)
         try:
-            # A função de automação deve ser chamada com o payload como argumento.
-            # Se for assíncrona, usa asyncio.run.
             if asyncio.iscoroutinefunction(fn):
                 ret = asyncio.run(fn(data))
             else:
                 ret = fn(data)
         except TypeError as e:
-            # Se a função não aceitar argumentos, tenta chamar sem argumentos.
             if "positional arguments but" in str(e) or "takes 0 positional arguments" in str(e):
                 if asyncio.iscoroutinefunction(fn):
                     ret = asyncio.run(fn())
                 else:
                     ret = fn()
             else:
-                # Se for outro TypeError, propaga a exceção.
                 raise
         if ret is None:
             result = {"ok": True}
