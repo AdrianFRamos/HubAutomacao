@@ -160,7 +160,7 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
-import api from '@/api/client'
+import api, { uploadDashboardImage }from '@/api/client'
 
 const props = defineProps({
   isOpen: Boolean,
@@ -206,7 +206,7 @@ async function handleFileUpload(event, type) {
     const formData = new FormData()
     formData.append('file', file)
 
-    const response = await api.uploadDashboardImage(formData)
+    const response = await uploadDashboardImage(formData)
 
     if (type === 'screenshot') {
       uploadedScreenshot.value = response

@@ -179,3 +179,11 @@ export async function uploadMultipleDashboardImages(formData) {
   }
   return response.json()
 }
+
+function getToken() {
+  try {
+    return localStorage.getItem('token')
+  } catch {
+    return null
+  }
+}

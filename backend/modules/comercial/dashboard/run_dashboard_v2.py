@@ -9,6 +9,10 @@ from modules.comercial.dashboard.ui_helpers import (
     multiscale_locate,
     click_image,
 )
+import pytesseract
+from PIL import Image
+
+pytesseract.pytesseract.tesseract_cmd = r"C:\\Program Files\\Tesseract-OCR\\tesseract.exe"
 
 BASE = os.path.dirname(__file__)
 CFG_PATH = os.path.join(BASE, "config.json")
@@ -100,6 +104,9 @@ def focus_login_window(cfg: dict, img_dir: str) -> bool:
         pyautogui.keyDown('alt')
         pyautogui.press('tab')
         pyautogui.keyUp('alt')
+        pyautogui.keyDown('alt')
+        pyautogui.press('tab')
+        pyautogui.keyUp('alt')
         time.sleep(1)
         log("Fallback Alt+Tab enviado")
         return True
@@ -138,21 +145,90 @@ def do_login_keyboard(username: str, password: str, cfg: dict, img_dir: str) -> 
     return True
 
 def click_menu_item_by_image(item_name: str, img_dir: str, timeout: int = 5) -> bool:
-    img_path = os.path.join(img_dir, "menu_items", f"{item_name}.png")
-    
+    img_path = os.path.join(img_dir, f"menu_{item_name}.png")
+
+    log(f"[MENU] tentando clicar no item '{item_name}'")
+    log(f"[MENU] verificando se existe imagem: {img_path}")
+
     if not os.path.exists(img_path):
-        log(f"Imagem não encontrada: {img_path}")
+        log(f"[MENU] imagem NÃO encontrada para '{item_name}': {img_path}")
         return False
-    
+
     try:
-        result = click_image(img_path, timeout=timeout, confidence=0.7)
+        result = click_image(img_path, timeout=timeout, confidence=0.6, clicks=1)
+
         if result:
-            log(f"Clicado em menu: {item_name}")
-            time.sleep(0.5)
+            log(f"[MENU] clicado em '{item_name}' via imagem '{os.path.basename(img_path)}'")
+            time.sleep(0.8)
             return True
+        else:
+            log(f"[MENU] click_image NÃO retornou posição para '{item_name}'")
+            return False
+
     except Exception as e:
-        log(f"Erro ao clicar em {item_name}: {e}")
-    
+        log(f"[MENU] Erro ao clicar em '{item_name}': {e}")
+        return False
+
+def ocr_click_on_text(pattern: str, min_conf: int = 55) -> bool:
+    screenshot = pyautogui.screenshot()
+    img = screenshot.convert("RGB")
+
+    data = pytesseract.image_to_data(img, output_type=pytesseract.Output.DICT, lang="por")
+
+    pattern_low = pattern.lower()
+    pattern_tokens = [t for t in re.split(r"\s+", pattern_low) if t]
+
+    n_boxes = len(data["text"])
+    linhas = {}
+
+    for i in range(n_boxes):
+        text = data["text"][i].strip()
+        if not text:
+            continue
+
+        conf_raw = data["conf"][i]
+        try:
+            conf = int(float(conf_raw)) if conf_raw not in ("", "-1") else 0
+        except ValueError:
+            conf = 0
+
+        if conf < min_conf:
+            continue
+
+        line_num = data["line_num"][i]
+        x, y, w, h = data["left"][i], data["top"][i], data["width"][i], data["height"][i]
+
+        if line_num not in linhas:
+            linhas[line_num] = {
+                "text": text,
+                "x_min": x,
+                "y_min": y,
+                "x_max": x + w,
+                "y_max": y + h,
+            }
+        else:
+            linhas[line_num]["text"] += " " + text
+            linhas[line_num]["x_min"] = min(linhas[line_num]["x_min"], x)
+            linhas[line_num]["y_min"] = min(linhas[line_num]["y_min"], y)
+            linhas[line_num]["x_max"] = max(linhas[line_num]["x_max"], x + w)
+            linhas[line_num]["y_max"] = max(linhas[line_num]["y_max"], y + h)
+
+    for line_num, info in linhas.items():
+        line_text_low = info["text"].lower()
+        if all(tok in line_text_low for tok in pattern_tokens):
+            cx = (info["x_min"] + info["x_max"]) // 2
+            cy = (info["y_min"] + info["y_max"]) // 2
+            log(f"[OCR] match linha={line_num}: '{info['text']}' -> ({cx}, {cy})")
+            try:
+                pyautogui.moveTo(cx, cy, duration=0.25)
+                pyautogui.doubleClick()
+                time.sleep(1.5)
+                return True
+            except Exception as e:
+                log(f"[OCR] erro ao clicar na linha: {e}")
+                return False
+
+    log(f"[OCR] nenhum match para '{pattern}' na tela atual")
     return False
 
 def click_menu_item_by_coords(x: int, y: int, item_name: str) -> bool:
@@ -166,63 +242,67 @@ def click_menu_item_by_coords(x: int, y: int, item_name: str) -> bool:
         return False
 
 def find_and_click_dashboard(dashboard_config: dict, img_dir: str) -> bool:
-    search_text = dashboard_config.get("search_text")
-    search_image = dashboard_config.get("search_image")
-    
-    if search_image:
-        img_path = os.path.join(img_dir, "dashboards", search_image)
-        if os.path.exists(img_path):
-            try:
-                result = click_image(img_path, timeout=5, confidence=0.75)
-                if result:
-                    log(f"Dashboard encontrado por imagem: {search_image}")
-                    return True
-            except Exception as e:
-                log(f"Erro ao buscar por imagem: {e}")
-    
-    if "click_coords" in dashboard_config:
-        coords = dashboard_config["click_coords"]
-        try:
-            pyautogui.click(coords["x"], coords["y"])
-            log(f"Dashboard clicado por coordenadas: ({coords['x']}, {coords['y']})")
+    search_text = dashboard_config.get("search_text") or dashboard_config.get("display_name")
+    if not search_text:
+        log("[DASH/OCR] Nenhum 'search_text' ou 'display_name' configurado")
+        return False
+
+    max_attempts = 12
+    log(f"[DASH/OCR] procurando dashboard via OCR: '{search_text}'")
+
+    screen_w, screen_h = pyautogui.size()
+    center_x, center_y = screen_w // 2, screen_h // 2
+    pyautogui.moveTo(center_x, center_y, duration=0.2)
+
+    for attempt in range(1, max_attempts + 1):
+        log(f"[DASH/OCR] Tentativa {attempt}/{max_attempts}")
+
+        if ocr_click_on_text(search_text, min_conf=55):
+            log("[DASH/OCR] Dashboard encontrado e clicado via OCR")
+            time.sleep(2.5)
             return True
+
+        try:
+            pyautogui.scroll(-300)
+            log(f"[DASH/OCR] scroll realizado a partir do centro da tela ({center_x}, {center_y})")
+            time.sleep(0.8)
         except Exception as e:
-            log(f"Erro ao clicar por coordenadas: {e}")
-    
-    log(f"Não foi possível encontrar dashboard: {search_text}")
+            log(f"[DASH/OCR] erro ao fazer scroll: {e}")
+
+    log(f"[DASH/OCR] não encontrou dashboard após {max_attempts} tentativas: {search_text}")
     return False
 
 def navigate_to_dashboard(dashboard_name: str, cfg: dict, img_dir: str) -> bool:
     dashboard_config = get_dashboard_config(dashboard_name)
-    
+
     if not dashboard_config:
         log(f"Dashboard '{dashboard_name}' não encontrado na configuração")
         return False
-    
+
     focus_window_by_title(cfg.get("titulo_janela", "DELPHOS.BI Principal"), timeout=4)
     time.sleep(1)
-    
+
     menu_path = dashboard_config.get("menu_path", [])
-    
     log(f"Navegando pelo menu: {' → '.join(menu_path)}")
-    
-    for i, menu_item in enumerate(menu_path):
-        if not click_menu_item_by_image(menu_item, img_dir):
-            coords = dashboard_config.get(f"menu_coords_{i}")
-            if coords:
-                click_menu_item_by_coords(coords["x"], coords["y"], menu_item)
-            else:
+
+    for menu_item in menu_path:
+        if menu_item == "Planilhas":
+            log("[MENU] clicando 'Planilhas' via OCR (sem coordenada fixa)")
+            if not ocr_click_on_text("Planilhas", min_conf=55):
+                log("Não conseguiu achar 'Planilhas' via OCR")
+                return False
+        else:
+            if not click_menu_item_by_image(menu_item, img_dir):
                 log(f"Não foi possível clicar em: {menu_item}")
                 return False
-        
+
         time.sleep(0.8)
-    
+
     if not find_and_click_dashboard(dashboard_config, img_dir):
         return False
-    
+
     log(f"Dashboard '{dashboard_config.get('display_name')}' selecionado")
     time.sleep(2.0)
-    
     return True
 
 def configure_period(periodicidade: str, dia: Optional[int] = None, 

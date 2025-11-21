@@ -34,22 +34,48 @@ def multiscale_locate(template_path, screen=None, scales=None, method=cv2.TM_CCO
             best.update({"score": float(maxv), "loc": maxloc, "w": nw, "h": nh, "scale": float(s)})
     return best
 
-def locate_image_on_screen(template_path, confidence=0.72, timeout=15, interval=0.6):
+def locate_image_on_screen(template_path, confidence=0.7, timeout=10, interval=0.5):
+    if not os.path.exists(template_path):
+        print(f"[DEBUG locate_image_on_screen] Template não existe: {template_path}")
+        return None
+
     start = time.time()
+
     while time.time() - start < timeout:
-        screen = _screenshot_bgr()
-        best = multiscale_locate(template_path, screen=screen)
-        if best and best["score"] >= confidence:
-            x,y = best["loc"]
-            return (int(x + best["w"]/2), int(y + best["h"]/2))
+        box = None
+        try:
+            box = pyautogui.locateOnScreen(template_path, confidence=confidence)
+        except Exception as e:
+            print(f"[DEBUG locate_image_on_screen] Erro com confidence para {template_path}: {repr(e)}")
+            try:
+                box = pyautogui.locateOnScreen(template_path)
+                print(f"[DEBUG locate_image_on_screen] Fallback SEM confidence usado para {template_path}")
+            except Exception as e2:
+                print(f"[DEBUG locate_image_on_screen] Erro também sem confidence para {template_path}: {repr(e2)}")
+                return None
+
+        if box:
+            x, y = pyautogui.center(box)
+            print(f"[DEBUG locate_image_on_screen] MATCH {template_path} pos=({x},{y}) box={box}")
+            return (x, y)
+
         time.sleep(interval)
+
+    print(f"[DEBUG locate_image_on_screen] Nenhum match encontrado para {template_path}")
     return None
 
-def click_image(template_path, confidence=0.72, timeout=12, interval=0.6, clicks=1, button='left'):
-    pos = locate_image_on_screen(template_path, confidence=confidence, timeout=timeout, interval=interval)
+def click_image(template_path, confidence=0.7, timeout=12, interval=0.6, clicks=1, button='left'):
+    pos = locate_image_on_screen(
+        template_path,
+        confidence=confidence,
+        timeout=timeout,
+        interval=interval
+    )
     if not pos:
+        print(f"[DEBUG click_image] Não encontrou {template_path} com confidence={confidence}")
         return False
-    x,y = pos
+
+    x, y = pos
     pyautogui.moveTo(x, y, duration=0.25)
     pyautogui.click(clicks=clicks, button=button)
     time.sleep(0.2)
